@@ -46,7 +46,7 @@
       outline: none;
       transition: border 0.2s;
     }
-    input:focus, textarea:focus { border-color: #38bdf8; }
+    input:focus, textarea:focus, select:focus { border-color: #38bdf8; }
     textarea { resize: vertical; min-height: 100px; }
     .char-count {
       text-align: right;
@@ -57,6 +57,8 @@
     }
     .char-count.warn { color: #f59e0b; }
     .char-count.over { color: #ef4444; }
+    .row { display: flex; gap: 12px; }
+    .row > div { flex: 1; }
     .badge {
       display: inline-block;
       background: #0ea5e9;
@@ -79,7 +81,7 @@
       margin-bottom: 10px;
     }
     .btn-primary { background: linear-gradient(135deg, #0ea5e9, #6366f1); color: #fff; }
-    .btn-secondary { background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; }
+    .btn-secondary { background: #1e3a5f; color: #38bdf8; border: 1px solid #38bdf8; }
     .btn:hover { opacity: 0.9; transform: translateY(-1px); }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
     #progressSection { display: none; }
@@ -105,13 +107,14 @@
       border: 1px solid #334155;
       padding: 12px;
       font-size: 0.8rem;
-      max-height: 250px;
+      max-height: 220px;
       overflow-y: auto;
       font-family: monospace;
+      display: none;
       margin-top: 14px;
     }
-    .log-ok { color: #22c55e; }
-    .log-err { color: #ef4444; }
+    .log-ok   { color: #22c55e; }
+    .log-err  { color: #ef4444; }
     .log-info { color: #94a3b8; }
     .stats { display: flex; gap: 12px; margin-top: 14px; }
     .stat {
@@ -124,9 +127,9 @@
     }
     .stat .val { font-size: 1.6rem; font-weight: 800; }
     .stat .lbl { font-size: 0.75rem; color: #64748b; margin-top: 3px; }
-    .stat.sent .val { color: #22c55e; }
+    .stat.sent   .val { color: #22c55e; }
     .stat.failed .val { color: #ef4444; }
-    .stat.total .val { color: #38bdf8; }
+    .stat.total  .val { color: #38bdf8; }
     .info-box {
       background: #172032;
       border-left: 3px solid #0ea5e9;
@@ -137,19 +140,6 @@
       margin-bottom: 16px;
     }
     .info-box b { color: #e2e8f0; }
-    .numbers-preview {
-      background: #0f172a;
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 0.82rem;
-      color: #94a3b8;
-      max-height: 100px;
-      overflow-y: auto;
-      margin-bottom: 16px;
-      display: none;
-      border: 1px solid #334155;
-      line-height: 1.8;
-    }
     .error-box {
       background: #2d1515;
       border-left: 3px solid #ef4444;
@@ -160,13 +150,77 @@
       margin-bottom: 16px;
       display: none;
     }
+    .numbers-preview {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.82rem;
+      color: #94a3b8;
+      max-height: 130px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+      display: none;
+      border: 1px solid #334155;
+      line-height: 1.8;
+    }
+    .prefix-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .prefix-item {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: normal;
+      color: #e2e8f0;
+    }
+    .prefix-item input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      padding: 0;
+      accent-color: #0ea5e9;
+    }
+    .tab-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #1e3a5f;
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
   </style>
 </head>
 <body>
 <div class="container">
   <header>
     <h1>📱 SCB Loans – Bulk SMS</h1>
-    <p>Send SMS through your Android via TextBee</p>
+    <p>Generate Kenyan numbers or add manually, then send via TextBee</p>
   </header>
 
   <!-- Config -->
@@ -178,15 +232,78 @@
     <input type="text" id="deviceId" value="69bd0e9d516d000b5db28f0f"/>
   </div>
 
-  <!-- Contacts -->
+  <!-- Contacts – tabbed -->
   <div class="card">
     <h2>👥 Contacts <span id="contactBadge" class="badge" style="display:none">0</span></h2>
-    <div class="info-box">
-      Add numbers below — one per line. Format: <b>07XXXXXXXXX</b> or <b>+2547XXXXXXXXX</b>
+
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab('generate')">⚡ Generate Numbers</button>
+      <button class="tab-btn"        onclick="switchTab('manual')">✍️ Enter Manually</button>
     </div>
-    <label>Phone Numbers (one per line)</label>
-    <textarea id="manualNumbers" placeholder="0712345678&#10;0723456789&#10;0705009549" rows="6"></textarea>
-    <button class="btn btn-secondary" onclick="loadNumbers()">✅ Load Numbers</button>
+
+    <!-- Tab: Generate -->
+    <div id="tab-generate" class="tab-panel active">
+      <div class="info-box">
+        Select Safaricom / Airtel prefixes, enter how many numbers to generate, then click <b>Generate</b>.
+      </div>
+      <label>Select Prefixes</label>
+      <div class="prefix-grid">
+        <label class="prefix-item"><input type="checkbox" value="0700" checked/> 0700</label>
+        <label class="prefix-item"><input type="checkbox" value="0701" checked/> 0701</label>
+        <label class="prefix-item"><input type="checkbox" value="0710" checked/> 0710</label>
+        <label class="prefix-item"><input type="checkbox" value="0711" checked/> 0711</label>
+        <label class="prefix-item"><input type="checkbox" value="0712" checked/> 0712</label>
+        <label class="prefix-item"><input type="checkbox" value="0720" checked/> 0720</label>
+        <label class="prefix-item"><input type="checkbox" value="0721" checked/> 0721</label>
+        <label class="prefix-item"><input type="checkbox" value="0722" checked/> 0722</label>
+        <label class="prefix-item"><input type="checkbox" value="0723" checked/> 0723</label>
+        <label class="prefix-item"><input type="checkbox" value="0724" checked/> 0724</label>
+        <label class="prefix-item"><input type="checkbox" value="0725" checked/> 0725</label>
+        <label class="prefix-item"><input type="checkbox" value="0726" checked/> 0726</label>
+        <label class="prefix-item"><input type="checkbox" value="0727" checked/> 0727</label>
+        <label class="prefix-item"><input type="checkbox" value="0728" checked/> 0728</label>
+        <label class="prefix-item"><input type="checkbox" value="0729" checked/> 0729</label>
+        <label class="prefix-item"><input type="checkbox" value="0740"/> 0740</label>
+        <label class="prefix-item"><input type="checkbox" value="0741"/> 0741</label>
+        <label class="prefix-item"><input type="checkbox" value="0742"/> 0742</label>
+        <label class="prefix-item"><input type="checkbox" value="0743"/> 0743</label>
+        <label class="prefix-item"><input type="checkbox" value="0745"/> 0745</label>
+        <label class="prefix-item"><input type="checkbox" value="0746"/> 0746</label>
+        <label class="prefix-item"><input type="checkbox" value="0757"/> 0757</label>
+        <label class="prefix-item"><input type="checkbox" value="0758"/> 0758</label>
+        <label class="prefix-item"><input type="checkbox" value="0759"/> 0759</label>
+        <label class="prefix-item"><input type="checkbox" value="0110"/> 0110</label>
+        <label class="prefix-item"><input type="checkbox" value="0111"/> 0111</label>
+        <label class="prefix-item"><input type="checkbox" value="0112"/> 0112</label>
+        <label class="prefix-item"><input type="checkbox" value="0113"/> 0113</label>
+      </div>
+      <div class="row">
+        <div>
+          <label>How Many Numbers</label>
+          <input type="number" id="numCount" value="100" min="1" max="10000"/>
+        </div>
+        <div>
+          <label>Avoid Duplicates</label>
+          <select id="dedupe">
+            <option value="yes">Yes (recommended)</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="generateNumbers()">⚡ Generate Numbers</button>
+    </div>
+
+    <!-- Tab: Manual -->
+    <div id="tab-manual" class="tab-panel">
+      <div class="info-box">
+        Add numbers below — one per line. Format: <b>07XXXXXXXXX</b> or <b>+2547XXXXXXXXX</b>
+      </div>
+      <label>Phone Numbers (one per line)</label>
+      <textarea id="manualNumbers" placeholder="0712345678&#10;0723456789&#10;0705009549" rows="6"></textarea>
+      <button class="btn btn-secondary" onclick="loadNumbers()">✅ Load Numbers</button>
+    </div>
+
+    <!-- Shared preview -->
     <div id="numbersPreview" class="numbers-preview"></div>
   </div>
 
@@ -202,7 +319,7 @@
   <div class="card">
     <h2>🚀 Send</h2>
     <div class="info-box">
-      Make sure your Android is <b>online</b> with TextBee app running and your <b>Safaricom bundle</b> is active.
+      Make sure your Android phone is <b>online</b> with TextBee app running and your <b>Safaricom SMS bundle</b> is active.
     </div>
     <div class="error-box" id="errorBox"></div>
     <button class="btn btn-primary" id="sendBtn" onclick="startSending()">Send Bulk SMS</button>
@@ -227,6 +344,16 @@
 <script>
   let contacts = [];
 
+  /* ── Tab switching ─────────────────────────────────── */
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+      b.classList.toggle('active', (i === 0 && tab === 'generate') || (i === 1 && tab === 'manual'));
+    });
+    document.getElementById('tab-generate').classList.toggle('active', tab === 'generate');
+    document.getElementById('tab-manual').classList.toggle('active',   tab === 'manual');
+  }
+
+  /* ── Number validation / formatting ───────────────── */
   function isValidKenyanNumber(num) {
     return /^(\+?254|0)[17]\d{8}$/.test(num);
   }
@@ -234,51 +361,90 @@
   function formatNumber(num) {
     num = num.replace(/[^0-9+]/g, '');
     if (num.startsWith('+254')) return num;
-    if (num.startsWith('254')) return '+' + num;
-    if (num.startsWith('0')) return '+254' + num.slice(1);
+    if (num.startsWith('254'))  return '+' + num;
+    if (num.startsWith('0'))    return '+254' + num.slice(1);
     return num;
   }
 
+  /* ── Generate random numbers ───────────────────────── */
+  function generateNumbers() {
+    const prefixes = [...document.querySelectorAll('.prefix-grid input:checked')].map(c => c.value);
+    if (!prefixes.length) return alert('Please select at least one prefix.');
+
+    const count = parseInt(document.getElementById('numCount').value);
+    if (!count || count < 1) return alert('Enter a valid number count.');
+
+    const dedupe   = document.getElementById('dedupe').value === 'yes';
+    const generated = new Set();
+    const result    = [];
+    let attempts    = 0;
+
+    while (result.length < count && attempts < count * 10) {
+      attempts++;
+      const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+      const suffix = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+      const number = '+254' + prefix.slice(1) + suffix;
+      if (dedupe && generated.has(number)) continue;
+      generated.add(number);
+      result.push(number);
+    }
+
+    contacts = result;
+    updateContactUI([], []);
+  }
+
+  /* ── Load manually entered numbers ────────────────── */
   function loadNumbers() {
-    const raw = document.getElementById('manualNumbers').value;
+    const raw   = document.getElementById('manualNumbers').value;
     const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const valid = [];
+    const valid   = [];
     const invalid = [];
 
     lines.forEach(line => {
       const num = line.replace(/[^0-9+]/g, '');
       if (isValidKenyanNumber(num)) valid.push(formatNumber(num));
-      else if (num.length > 0) invalid.push(line);
+      else if (num.length > 0)      invalid.push(line);
     });
 
     contacts = [...new Set(valid)];
+    updateContactUI(invalid, valid);
 
-    const badge = document.getElementById('contactBadge');
-    const preview = document.getElementById('numbersPreview');
-    badge.style.display = contacts.length ? 'inline-block' : 'none';
-    badge.textContent = contacts.length;
-
-    if (contacts.length) {
-      preview.style.display = 'block';
-      preview.innerHTML = contacts.slice(0, 50).map(n =>
-        `<span style="margin-right:10px;color:#22c55e">✅ ${n}</span>`).join(' ') +
-        (contacts.length > 50 ? `<br/><span style="color:#64748b">...and ${contacts.length - 50} more</span>` : '') +
-        (invalid.length ? `<br/><span style="color:#ef4444">❌ Invalid: ${invalid.join(', ')}</span>` : '');
-    }
-
-    if (contacts.length === 0) alert('No valid Kenyan numbers found. Check format: 07XXXXXXXXX');
+    if (!contacts.length) alert('No valid Kenyan numbers found. Check format: 07XXXXXXXXX');
     else alert(`✅ ${contacts.length} valid number(s) loaded!`);
   }
 
-  function updateCharCount() {
-    const len = document.getElementById('message').value.length;
-    const el = document.getElementById('charCount');
-    el.textContent = `${len} / 160`;
-    el.className = 'char-count' + (len > 160 ? ' over' : len > 130 ? ' warn' : '');
+  /* ── Shared contact UI update ──────────────────────── */
+  function updateContactUI(invalid = [], valid = []) {
+    const badge   = document.getElementById('contactBadge');
+    const preview = document.getElementById('numbersPreview');
+
+    badge.style.display = contacts.length ? 'inline-block' : 'none';
+    badge.textContent   = contacts.length;
+
+    if (contacts.length) {
+      const isGenerated = valid.length === 0; // generated numbers won't pass isValid check, so use colour differently
+      preview.style.display = 'block';
+      preview.innerHTML =
+        contacts.slice(0, 100).map(n =>
+          `<span style="margin-right:10px;color:${isGenerated ? '#38bdf8' : '#22c55e'}">${isGenerated ? '' : '✅ '}${n}</span>`
+        ).join('') +
+        (contacts.length > 100 ? `<br/><span style="color:#64748b">...and ${contacts.length - 100} more</span>` : '') +
+        (invalid && invalid.length ? `<br/><span style="color:#ef4444">❌ Invalid: ${invalid.join(', ')}</span>` : '');
+    }
   }
 
+  /* ── Char counter ──────────────────────────────────── */
+  function updateCharCount() {
+    const len = document.getElementById('message').value.length;
+    const el  = document.getElementById('charCount');
+    el.textContent = `${len} / 160`;
+    el.className   = 'char-count' + (len > 160 ? ' over' : len > 130 ? ' warn' : '');
+  }
+
+  /* ── Log helpers ───────────────────────────────────── */
   function addLog(msg, type = 'info') {
     const log = document.getElementById('log');
+    log.style.display = 'block';
     const div = document.createElement('div');
     div.className = `log-${type}`;
     div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
@@ -289,50 +455,76 @@
   function showError(msg) {
     const box = document.getElementById('errorBox');
     box.style.display = 'block';
-    box.textContent = '❌ ' + msg;
+    box.textContent   = '❌ ' + msg;
   }
 
   function hideError() {
     document.getElementById('errorBox').style.display = 'none';
   }
 
+  /* ── Send logic ────────────────────────────────────── */
   async function startSending() {
     hideError();
-    const apiKey = document.getElementById('apiKey').value.trim();
+    const apiKey   = document.getElementById('apiKey').value.trim();
     const deviceId = document.getElementById('deviceId').value.trim();
-    const message = document.getElementById('message').value.trim();
+    const message  = document.getElementById('message').value.trim();
 
-    if (!apiKey) return showError('API Key is missing.');
-    if (!deviceId) return showError('Device ID is missing.');
-    if (!message) return showError('Please enter a message.');
-    if (contacts.length === 0) return showError('No contacts loaded. Add numbers and click Load Numbers first.');
+    if (!apiKey)           return showError('API Key is missing.');
+    if (!deviceId)         return showError('Device ID is missing.');
+    if (!message)          return showError('Please enter a message.');
+    if (!contacts.length)  return showError('No contacts loaded. Generate or add numbers first.');
 
     document.getElementById('progressSection').style.display = 'block';
     document.getElementById('sendBtn').disabled = true;
-    document.getElementById('log').innerHTML = '';
+    document.getElementById('log').innerHTML    = '';
+    document.getElementById('log').style.display = 'none';
 
     const total = contacts.length;
     let sent = 0, failed = 0;
-    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statTotal').textContent   = total;
     document.getElementById('progressText').textContent = 'Sending...';
-    addLog(`Sending to ${total} number(s)...`, 'info');
+    addLog(`Starting bulk send to ${total} number(s)...`, 'info');
 
+    const endpoint = `https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/send-sms`;
+    const headers  = { 'Content-Type': 'application/json', 'x-api-key': apiKey };
+
+    // Attempt bulk send first
+    try {
+      const res  = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ recipients: contacts, message })
+      });
+      const text = await res.text();
+      let data   = {};
+      try { data = JSON.parse(text); } catch(e) {}
+
+      if (res.ok) {
+        sent = total;
+        document.getElementById('statSent').textContent     = sent;
+        document.getElementById('progressBar').style.width  = '100%';
+        document.getElementById('progressText').textContent = `Completed — ${sent} sent`;
+        addLog(`✅ All ${total} messages queued successfully!`, 'ok');
+        document.getElementById('sendBtn').disabled = false;
+        return;
+      }
+
+      // Bulk failed – fall through to one-by-one
+      addLog(`Bulk send declined (${data.message || res.status}). Switching to one-by-one mode...`, 'info');
+    } catch (err) {
+      addLog(`Bulk attempt network error: ${err.message}. Switching to one-by-one mode...`, 'info');
+    }
+
+    // One-by-one fallback
     for (let i = 0; i < contacts.length; i++) {
       try {
-        const res = await fetch(`https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/send-sms`, {
+        const res  = await fetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey
-          },
-          body: JSON.stringify({
-            recipients: [contacts[i]],
-            message: message
-          })
+          headers,
+          body: JSON.stringify({ recipients: [contacts[i]], message })
         });
-
         const text = await res.text();
-        let data = {};
+        let data   = {};
         try { data = JSON.parse(text); } catch(e) {}
 
         if (res.ok) {
@@ -347,12 +539,12 @@
         addLog(`❌ Network error for ${contacts[i]}: ${err.message}`, 'err');
       }
 
-      document.getElementById('statSent').textContent = sent;
-      document.getElementById('statFailed').textContent = failed;
-      document.getElementById('progressBar').style.width = `${((i + 1) / total) * 100}%`;
-      document.getElementById('progressText').textContent = `${i + 1} of ${total} processed`;
+      document.getElementById('statSent').textContent      = sent;
+      document.getElementById('statFailed').textContent    = failed;
+      document.getElementById('progressBar').style.width   = `${((i + 1) / total) * 100}%`;
+      document.getElementById('progressText').textContent  = `${i + 1} of ${total} processed`;
 
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 400));
     }
 
     addLog(`🎉 Done! Sent: ${sent} | Failed: ${failed}`, sent > 0 ? 'ok' : 'err');
@@ -360,6 +552,7 @@
     document.getElementById('sendBtn').disabled = false;
   }
 
+  // Init
   updateCharCount();
 </script>
 </body>
