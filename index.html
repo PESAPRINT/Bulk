@@ -1,242 +1,608 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SCB Loans – Bulk SMS Sender</title>
+  <title>SCB Loans — Bulk SMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #080c14;
+      --surface:   #0d1420;
+      --card:      #111827;
+      --border:    #1e2d45;
+      --border2:   #243450;
+      --accent:    #00e5a0;
+      --accent2:   #00b87a;
+      --blue:      #3b82f6;
+      --red:       #f43f5e;
+      --yellow:    #f59e0b;
+      --muted:     #4b6480;
+      --text:      #e2eaf4;
+      --subtext:   #7b92ad;
+      --mono:      'DM Mono', monospace;
+      --head:      'Syne', sans-serif;
+      --body:      'Instrument Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
+      font-family: var(--body);
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
-      padding: 20px;
+      padding: 0 16px 60px;
+      overflow-x: hidden;
     }
-    .container { max-width: 750px; margin: 0 auto; }
-    header { text-align: center; padding: 30px 0 20px; }
-    header h1 { font-size: 1.8rem; color: #38bdf8; letter-spacing: 1px; }
-    header p { color: #94a3b8; font-size: 0.9rem; margin-top: 5px; }
-    .card {
-      background: #1e293b;
-      border-radius: 14px;
-      padding: 24px;
-      margin-bottom: 20px;
-      border: 1px solid #334155;
+
+    /* ── noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
     }
-    .card h2 { font-size: 1rem; color: #38bdf8; margin-bottom: 16px; }
-    label {
-      display: block;
-      font-size: 0.82rem;
-      color: #94a3b8;
-      margin-bottom: 6px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+
+    /* ── glowing orbs ── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.12;
     }
-    input, textarea, select {
-      width: 100%;
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      color: #e2e8f0;
-      padding: 11px 14px;
-      font-size: 0.95rem;
-      margin-bottom: 16px;
-      outline: none;
-      transition: border 0.2s;
+    .orb-1 { width: 600px; height: 600px; background: var(--accent); top: -200px; right: -150px; }
+    .orb-2 { width: 400px; height: 400px; background: var(--blue);   bottom: 50px; left: -100px; }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 720px;
+      margin: 0 auto;
     }
-    input:focus, textarea:focus, select:focus { border-color: #38bdf8; }
-    textarea { resize: vertical; min-height: 100px; }
-    .char-count {
-      text-align: right;
-      font-size: 0.78rem;
-      color: #64748b;
-      margin-top: -12px;
-      margin-bottom: 16px;
-    }
-    .char-count.warn { color: #f59e0b; }
-    .char-count.over { color: #ef4444; }
-    .row { display: flex; gap: 12px; }
-    .row > div { flex: 1; }
-    .badge {
-      display: inline-block;
-      background: #0ea5e9;
-      color: #fff;
-      border-radius: 99px;
-      padding: 2px 10px;
-      font-size: 0.78rem;
-      font-weight: 700;
-      margin-left: 8px;
-    }
-    .btn {
-      width: 100%;
-      padding: 14px;
-      border-radius: 10px;
-      border: none;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: 10px;
-    }
-    .btn-primary { background: linear-gradient(135deg, #0ea5e9, #6366f1); color: #fff; }
-    .btn-secondary { background: #1e3a5f; color: #38bdf8; border: 1px solid #38bdf8; }
-    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-    #progressSection { display: none; }
-    .progress-bar-wrap {
-      background: #0f172a;
-      border-radius: 99px;
-      height: 10px;
-      margin: 12px 0;
-      overflow: hidden;
-      border: 1px solid #334155;
-    }
-    .progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #0ea5e9, #6366f1);
-      border-radius: 99px;
-      width: 0%;
-      transition: width 0.4s;
-    }
-    .progress-text { font-size: 0.85rem; color: #94a3b8; text-align: center; }
-    #log {
-      background: #0f172a;
-      border-radius: 8px;
-      border: 1px solid #334155;
-      padding: 12px;
-      font-size: 0.8rem;
-      max-height: 220px;
-      overflow-y: auto;
-      font-family: monospace;
-      display: none;
-      margin-top: 14px;
-    }
-    .log-ok   { color: #22c55e; }
-    .log-err  { color: #ef4444; }
-    .log-info { color: #94a3b8; }
-    .stats { display: flex; gap: 12px; margin-top: 14px; }
-    .stat {
-      flex: 1;
-      background: #0f172a;
-      border-radius: 10px;
-      padding: 14px;
+
+    /* ── Header ── */
+    header {
+      padding: 52px 0 36px;
       text-align: center;
-      border: 1px solid #334155;
+      animation: fadeUp 0.6s ease both;
     }
-    .stat .val { font-size: 1.6rem; font-weight: 800; }
-    .stat .lbl { font-size: 0.75rem; color: #64748b; margin-top: 3px; }
-    .stat.sent   .val { color: #22c55e; }
-    .stat.failed .val { color: #ef4444; }
-    .stat.total  .val { color: #38bdf8; }
-    .info-box {
-      background: #172032;
-      border-left: 3px solid #0ea5e9;
-      border-radius: 6px;
-      padding: 10px 14px;
-      font-size: 0.82rem;
-      color: #94a3b8;
-      margin-bottom: 16px;
-    }
-    .info-box b { color: #e2e8f0; }
-    .error-box {
-      background: #2d1515;
-      border-left: 3px solid #ef4444;
-      border-radius: 6px;
-      padding: 10px 14px;
-      font-size: 0.82rem;
-      color: #fca5a5;
-      margin-bottom: 16px;
-      display: none;
-    }
-    .numbers-preview {
-      background: #0f172a;
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 0.82rem;
-      color: #94a3b8;
-      max-height: 130px;
-      overflow-y: auto;
-      margin-bottom: 16px;
-      display: none;
-      border: 1px solid #334155;
-      line-height: 1.8;
-    }
-    .prefix-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
+    .logo-pill {
+      display: inline-flex;
+      align-items: center;
       gap: 8px;
-      margin-bottom: 16px;
+      background: rgba(0,229,160,0.08);
+      border: 1px solid rgba(0,229,160,0.2);
+      border-radius: 99px;
+      padding: 6px 16px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
     }
-    .prefix-item {
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 8px;
+    .logo-pill span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 1.8s infinite; }
+    header h1 {
+      font-family: var(--head);
+      font-size: clamp(1.9rem, 5vw, 2.7rem);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #fff 30%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p {
+      color: var(--subtext);
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.6s ease both;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(0,229,160,0.03) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .card:nth-child(1) { animation-delay: 0.05s; }
+    .card:nth-child(2) { animation-delay: 0.10s; }
+    .card:nth-child(3) { animation-delay: 0.15s; }
+    .card:nth-child(4) { animation-delay: 0.20s; }
+    .card:nth-child(5) { animation-delay: 0.25s; }
+
+    .card-header {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 0.85rem;
-      cursor: pointer;
-      text-transform: none;
-      letter-spacing: 0;
-      font-weight: normal;
-      color: #e2e8f0;
+      justify-content: space-between;
+      margin-bottom: 22px;
     }
-    .prefix-item input[type="checkbox"] {
-      width: auto;
-      margin: 0;
-      padding: 0;
-      accent-color: #0ea5e9;
-    }
-    .tab-row {
+    .card-title {
+      font-family: var(--head);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
       display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-icon {
+      width: 32px; height: 32px;
+      background: rgba(0,229,160,0.1);
+      border: 1px solid rgba(0,229,160,0.2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+    }
+
+    /* ── Labels & Inputs ── */
+    .field { margin-bottom: 18px; }
+    .field:last-child { margin-bottom: 0; }
+    .lbl {
+      display: block;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 12px 16px;
+      font-size: 0.92rem;
+      font-family: var(--body);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+    }
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    input[type="number"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
+    }
+    input[type="password"] { font-family: var(--mono); letter-spacing: 2px; }
+    textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
+    .row { display: flex; gap: 14px; }
+    .row .field { flex: 1; margin-bottom: 0; }
+
+    /* ── Char count ── */
+    .char-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .char-bar-track {
+      flex: 1;
+      height: 3px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .char-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width 0.2s, background 0.2s;
+    }
+    .char-num {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .char-num.warn { color: var(--yellow); }
+    .char-num.over { color: var(--red); }
+
+    /* ── Tabs ── */
+    .tab-strip {
+      display: flex;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 22px;
     }
     .tab-btn {
       flex: 1;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #334155;
-      background: #0f172a;
-      color: #94a3b8;
-      font-size: 0.9rem;
+      padding: 9px;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      color: var(--subtext);
+      font-family: var(--body);
+      font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
     }
     .tab-btn.active {
-      background: #1e3a5f;
-      border-color: #38bdf8;
-      color: #38bdf8;
+      background: rgba(0,229,160,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(0,229,160,0.25);
     }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
+
+    /* ── Prefix grid ── */
+    .prefix-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 480px) { .prefix-grid { grid-template-columns: repeat(3, 1fr); } }
+    .pfx-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .pfx-item:hover { border-color: var(--border2); }
+    .pfx-item.checked {
+      background: rgba(0,229,160,0.06);
+      border-color: rgba(0,229,160,0.3);
+    }
+    .pfx-item input[type="checkbox"] {
+      width: 14px; height: 14px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+      padding: 0; margin: 0; border: none;
+      background: transparent;
+      box-shadow: none;
+    }
+    .pfx-label {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--subtext);
+      pointer-events: none;
+    }
+    .pfx-item.checked .pfx-label { color: var(--accent); }
+
+    .select-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .link-btn {
+      font-size: 0.78rem;
+      font-family: var(--mono);
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .link-btn:hover { opacity: 1; }
+
+    /* ── Badge ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(0,229,160,0.12);
+      border: 1px solid rgba(0,229,160,0.25);
+      color: var(--accent);
+      border-radius: 99px;
+      padding: 3px 10px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+
+    /* ── Numbers preview ── */
+    .numbers-preview {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 0.8rem;
+      font-family: var(--mono);
+      color: var(--subtext);
+      max-height: 130px;
+      overflow-y: auto;
+      line-height: 2;
+      display: none;
+      margin-top: 14px;
+    }
+    .numbers-preview::-webkit-scrollbar { width: 4px; }
+    .numbers-preview::-webkit-scrollbar-track { background: transparent; }
+    .numbers-preview::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+    /* ── Message preview pill ── */
+    .msg-preview {
+      background: linear-gradient(135deg, rgba(0,229,160,0.04), rgba(59,130,246,0.04));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: var(--text);
+      margin-top: 14px;
+      position: relative;
+    }
+    .msg-preview::before {
+      content: 'PREVIEW';
+      position: absolute;
+      top: -9px;
+      left: 16px;
+      background: var(--card);
+      padding: 0 8px;
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+    .msg-link { color: var(--accent); text-decoration: none; }
+
+    /* ── Buttons ── */
+    .btn {
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: none;
+      font-family: var(--head);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn + .btn { margin-top: 10px; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, #00c4ff 100%);
+      color: #050e1a;
+      box-shadow: 0 4px 24px rgba(0,229,160,0.25);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,229,160,0.35);
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid rgba(0,229,160,0.3);
+    }
+    .btn-outline:hover { background: rgba(0,229,160,0.06); transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+    /* ── Info & Error boxes ── */
+    .info-box {
+      background: rgba(59,130,246,0.06);
+      border-left: 3px solid rgba(59,130,246,0.5);
+      border-radius: 0 8px 8px 0;
+      padding: 11px 15px;
+      font-size: 0.83rem;
+      color: var(--subtext);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    .info-box b { color: var(--text); }
+    .error-box {
+      background: rgba(244,63,94,0.08);
+      border-left: 3px solid var(--red);
+      border-radius: 0 8px 8px 0;
+      padding: 11px 15px;
+      font-size: 0.83rem;
+      color: #fca5a5;
+      margin-bottom: 16px;
+      display: none;
+      line-height: 1.6;
+    }
+
+    /* ── Progress ── */
+    #progressSection { display: none; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 10px;
+      text-align: center;
+    }
+    .stat-val {
+      font-family: var(--head);
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .stat-box.s-total .stat-val { color: var(--blue); }
+    .stat-box.s-sent  .stat-val { color: var(--accent); }
+    .stat-box.s-fail  .stat-val { color: var(--red); }
+    .stat-lbl {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    .prog-track {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .prog-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #00c4ff);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+      position: relative;
+    }
+    .prog-fill::after {
+      content: '';
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 40px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4));
+      animation: shimmer 1.2s infinite;
+    }
+    .prog-text {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    /* ── Log ── */
+    #log {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 0.77rem;
+      max-height: 220px;
+      overflow-y: auto;
+      display: none;
+      line-height: 1.9;
+    }
+    #log::-webkit-scrollbar { width: 4px; }
+    #log::-webkit-scrollbar-track { background: transparent; }
+    #log::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+    .log-ok   { color: var(--accent); }
+    .log-err  { color: var(--red); }
+    .log-info { color: var(--muted); }
+    .log-head { color: #fff; font-weight: 500; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.5; transform: scale(0.85); }
+    }
+    @keyframes shimmer {
+      0%   { opacity: 0; }
+      50%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(5,14,26,0.3);
+      border-top-color: #050e1a;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 18px 0;
+    }
+    .divider hr { flex: 1; border: none; border-top: 1px solid var(--border); }
+    .divider span { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); letter-spacing: 1px; }
   </style>
 </head>
 <body>
-<div class="container">
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="wrap">
+
+  <!-- Header -->
   <header>
-    <h1>📱 SCB Loans – Bulk SMS</h1>
-    <p>Generate Kenyan numbers or add manually, then send via TextBee</p>
+    <div class="logo-pill"><span></span> TextBee Gateway</div>
+    <h1>SCB Loans<br/>Bulk SMS</h1>
+    <p>Send M-Pesa loan offers to thousands instantly</p>
   </header>
 
-  <!-- Config -->
+  <!-- ① Configuration -->
   <div class="card">
-    <h2>⚙️ Configuration</h2>
-    <label>API Key</label>
-    <input type="password" id="apiKey" value="f88eee04-bdc5-4e50-bec1-08d9b15e9296"/>
-    <label>Device ID</label>
-    <input type="text" id="deviceId" value="69bd0e9d516d000b5db28f0f"/>
+    <div class="card-header">
+      <div class="card-title"><div class="card-icon">⚙️</div> Configuration</div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <span class="lbl">API Key</span>
+        <input type="password" id="apiKey" value="f88eee04-bdc5-4e50-bec1-08d9b15e9296" autocomplete="off"/>
+      </div>
+      <div class="field">
+        <span class="lbl">Device ID</span>
+        <input type="text" id="deviceId" value="69bd0e9d516d000b5db28f0f" autocomplete="off"/>
+      </div>
+    </div>
+    <div class="info-box" style="margin-bottom:0">
+      Keep your Android phone <b>online</b> with TextBee running and an active <b>Safaricom SMS bundle</b>.
+    </div>
   </div>
 
-  <!-- Contacts – tabbed -->
+  <!-- ② Contacts -->
   <div class="card">
-    <h2>👥 Contacts <span id="contactBadge" class="badge" style="display:none">0</span></h2>
+    <div class="card-header">
+      <div class="card-title"><div class="card-icon">📲</div> Contacts</div>
+      <div id="contactBadge" class="badge" style="display:none"><span id="badgeCount">0</span> loaded</div>
+    </div>
 
-    <div class="tab-row">
+    <div class="tab-strip">
       <button class="tab-btn active" onclick="switchTab('generate')">⚡ Generate Numbers</button>
       <button class="tab-btn"        onclick="switchTab('manual')">✍️ Enter Manually</button>
     </div>
@@ -244,315 +610,464 @@
     <!-- Tab: Generate -->
     <div id="tab-generate" class="tab-panel active">
       <div class="info-box">
-        Select Safaricom / Airtel prefixes, enter how many numbers to generate, then click <b>Generate</b>.
+        Pick Safaricom / Airtel prefixes → set count → <b>Generate</b>. Numbers are formatted to +254 automatically.
       </div>
-      <label>Select Prefixes</label>
-      <div class="prefix-grid">
-        <label class="prefix-item"><input type="checkbox" value="0700" checked/> 0700</label>
-        <label class="prefix-item"><input type="checkbox" value="0701" checked/> 0701</label>
-        <label class="prefix-item"><input type="checkbox" value="0710" checked/> 0710</label>
-        <label class="prefix-item"><input type="checkbox" value="0711" checked/> 0711</label>
-        <label class="prefix-item"><input type="checkbox" value="0712" checked/> 0712</label>
-        <label class="prefix-item"><input type="checkbox" value="0720" checked/> 0720</label>
-        <label class="prefix-item"><input type="checkbox" value="0721" checked/> 0721</label>
-        <label class="prefix-item"><input type="checkbox" value="0722" checked/> 0722</label>
-        <label class="prefix-item"><input type="checkbox" value="0723" checked/> 0723</label>
-        <label class="prefix-item"><input type="checkbox" value="0724" checked/> 0724</label>
-        <label class="prefix-item"><input type="checkbox" value="0725" checked/> 0725</label>
-        <label class="prefix-item"><input type="checkbox" value="0726" checked/> 0726</label>
-        <label class="prefix-item"><input type="checkbox" value="0727" checked/> 0727</label>
-        <label class="prefix-item"><input type="checkbox" value="0728" checked/> 0728</label>
-        <label class="prefix-item"><input type="checkbox" value="0729" checked/> 0729</label>
-        <label class="prefix-item"><input type="checkbox" value="0740"/> 0740</label>
-        <label class="prefix-item"><input type="checkbox" value="0741"/> 0741</label>
-        <label class="prefix-item"><input type="checkbox" value="0742"/> 0742</label>
-        <label class="prefix-item"><input type="checkbox" value="0743"/> 0743</label>
-        <label class="prefix-item"><input type="checkbox" value="0745"/> 0745</label>
-        <label class="prefix-item"><input type="checkbox" value="0746"/> 0746</label>
-        <label class="prefix-item"><input type="checkbox" value="0757"/> 0757</label>
-        <label class="prefix-item"><input type="checkbox" value="0758"/> 0758</label>
-        <label class="prefix-item"><input type="checkbox" value="0759"/> 0759</label>
-        <label class="prefix-item"><input type="checkbox" value="0110"/> 0110</label>
-        <label class="prefix-item"><input type="checkbox" value="0111"/> 0111</label>
-        <label class="prefix-item"><input type="checkbox" value="0112"/> 0112</label>
-        <label class="prefix-item"><input type="checkbox" value="0113"/> 0113</label>
+
+      <div class="select-actions">
+        <button class="link-btn" onclick="selectAllPfx(true)">Select all</button>
+        <span style="color:var(--border2)">·</span>
+        <button class="link-btn" onclick="selectAllPfx(false)">Clear all</button>
+        <span style="color:var(--border2)">·</span>
+        <button class="link-btn" onclick="selectSafaricom()">Safaricom only</button>
+        <span style="color:var(--border2)">·</span>
+        <button class="link-btn" onclick="selectAirtel()">Airtel only</button>
       </div>
+
+      <div class="prefix-grid" id="prefixGrid">
+        <!-- Safaricom -->
+        <label class="pfx-item checked"><input type="checkbox" value="0700" checked/><span class="pfx-label">0700</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0701" checked/><span class="pfx-label">0701</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0710" checked/><span class="pfx-label">0710</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0711" checked/><span class="pfx-label">0711</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0712" checked/><span class="pfx-label">0712</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0720" checked/><span class="pfx-label">0720</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0721" checked/><span class="pfx-label">0721</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0722" checked/><span class="pfx-label">0722</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0723" checked/><span class="pfx-label">0723</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0724" checked/><span class="pfx-label">0724</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0725" checked/><span class="pfx-label">0725</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0726" checked/><span class="pfx-label">0726</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0727" checked/><span class="pfx-label">0727</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0728" checked/><span class="pfx-label">0728</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0729" checked/><span class="pfx-label">0729</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0740" checked/><span class="pfx-label">0740</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0741" checked/><span class="pfx-label">0741</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0742" checked/><span class="pfx-label">0742</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0743" checked/><span class="pfx-label">0743</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0745" checked/><span class="pfx-label">0745</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0746" checked/><span class="pfx-label">0746</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0757" checked/><span class="pfx-label">0757</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0758" checked/><span class="pfx-label">0758</span></label>
+        <label class="pfx-item checked"><input type="checkbox" value="0759" checked/><span class="pfx-label">0759</span></label>
+        <!-- Airtel -->
+        <label class="pfx-item"><input type="checkbox" value="0110"/><span class="pfx-label">0110</span></label>
+        <label class="pfx-item"><input type="checkbox" value="0111"/><span class="pfx-label">0111</span></label>
+        <label class="pfx-item"><input type="checkbox" value="0112"/><span class="pfx-label">0112</span></label>
+        <label class="pfx-item"><input type="checkbox" value="0113"/><span class="pfx-label">0113</span></label>
+      </div>
+
       <div class="row">
-        <div>
-          <label>How Many Numbers</label>
-          <input type="number" id="numCount" value="100" min="1" max="10000"/>
+        <div class="field">
+          <span class="lbl">Number of contacts</span>
+          <input type="number" id="numCount" value="200" min="1"/>
         </div>
-        <div>
-          <label>Avoid Duplicates</label>
+        <div class="field">
+          <span class="lbl">Duplicates</span>
           <select id="dedupe">
-            <option value="yes">Yes (recommended)</option>
-            <option value="no">No</option>
+            <option value="yes">Remove duplicates</option>
+            <option value="no">Allow duplicates</option>
           </select>
         </div>
       </div>
-      <button class="btn btn-secondary" onclick="generateNumbers()">⚡ Generate Numbers</button>
+      <button class="btn btn-outline" onclick="generateNumbers()" id="genBtn">⚡ Generate Numbers</button>
     </div>
 
     <!-- Tab: Manual -->
     <div id="tab-manual" class="tab-panel">
       <div class="info-box">
-        Add numbers below — one per line. Format: <b>07XXXXXXXXX</b> or <b>+2547XXXXXXXXX</b>
+        One number per line — accepts <b>07XXXXXXXXX</b> or <b>+2547XXXXXXXXX</b>.<br/>
+        Invalid numbers are flagged and skipped.
       </div>
-      <label>Phone Numbers (one per line)</label>
-      <textarea id="manualNumbers" placeholder="0712345678&#10;0723456789&#10;0705009549" rows="6"></textarea>
-      <button class="btn btn-secondary" onclick="loadNumbers()">✅ Load Numbers</button>
+      <div class="field">
+        <span class="lbl">Phone numbers</span>
+        <textarea id="manualNumbers" placeholder="0712345678&#10;0723456789&#10;+254705009549" rows="7" style="font-family:var(--mono);font-size:0.85rem"></textarea>
+      </div>
+      <button class="btn btn-outline" onclick="loadNumbers()">✅ Load & Validate Numbers</button>
     </div>
 
-    <!-- Shared preview -->
     <div id="numbersPreview" class="numbers-preview"></div>
   </div>
 
-  <!-- Message -->
+  <!-- ③ Message -->
   <div class="card">
-    <h2>✉️ Message</h2>
-    <label>SMS Content</label>
-    <textarea id="message" oninput="updateCharCount()">Unahitaji pesa haraka? Apply for an instant M-Pesa loan at SCB Quick Loans! Low interest, no paperwork, decision in seconds. Check eligibility👉 https://pesaprint.github.io/SCB-LOANS/</textarea>
-    <div class="char-count" id="charCount">0 / 160</div>
+    <div class="card-header">
+      <div class="card-title"><div class="card-icon">✉️</div> Message</div>
+    </div>
+    <div class="field">
+      <span class="lbl">SMS Content</span>
+      <textarea id="message" oninput="updateCharCount()">Unahitaji laon ya haraka? Apply for an instant loan at SCB! Low interest, no paperwork and straight to your M-pesa. 
+
+Click the link below to check if you qualify👇
+
+https://pesaprint.github.io/SCB-LOANS/</textarea>
+    </div>
+    <div class="char-bar-wrap">
+      <div class="char-bar-track"><div class="char-bar-fill" id="charFill"></div></div>
+      <span class="char-num" id="charCount">0 / 160</span>
+    </div>
+    <div class="msg-preview" id="msgPreview"></div>
   </div>
 
-  <!-- Send -->
+  <!-- ④ Send -->
   <div class="card">
-    <h2>🚀 Send</h2>
-    <div class="info-box">
-      Make sure your Android phone is <b>online</b> with TextBee app running and your <b>Safaricom SMS bundle</b> is active.
+    <div class="card-header">
+      <div class="card-title"><div class="card-icon">🚀</div> Launch</div>
     </div>
     <div class="error-box" id="errorBox"></div>
-    <button class="btn btn-primary" id="sendBtn" onclick="startSending()">Send Bulk SMS</button>
+    <button class="btn btn-primary" id="sendBtn" onclick="startSending()">
+      Send Bulk SMS
+    </button>
+    <button class="btn btn-outline" id="stopBtn" onclick="stopSending()" style="display:none">
+      ⏹ Stop Sending
+    </button>
   </div>
 
-  <!-- Progress -->
+  <!-- ⑤ Progress -->
   <div class="card" id="progressSection">
-    <h2>📊 Progress</h2>
-    <div class="stats">
-      <div class="stat total"><div class="val" id="statTotal">0</div><div class="lbl">Total</div></div>
-      <div class="stat sent"><div class="val" id="statSent">0</div><div class="lbl">Sent</div></div>
-      <div class="stat failed"><div class="val" id="statFailed">0</div><div class="lbl">Failed</div></div>
+    <div class="card-header">
+      <div class="card-title"><div class="card-icon">📊</div> Progress</div>
+      <span id="rateLabel" style="font-family:var(--mono);font-size:0.72rem;color:var(--muted)"></span>
     </div>
-    <div class="progress-bar-wrap">
-      <div class="progress-bar" id="progressBar"></div>
+    <div class="stats-row">
+      <div class="stat-box s-total">
+        <div class="stat-val" id="statTotal">0</div>
+        <div class="stat-lbl">Total</div>
+      </div>
+      <div class="stat-box s-sent">
+        <div class="stat-val" id="statSent">0</div>
+        <div class="stat-lbl">Sent</div>
+      </div>
+      <div class="stat-box s-fail">
+        <div class="stat-val" id="statFailed">0</div>
+        <div class="stat-lbl">Failed</div>
+      </div>
     </div>
-    <div class="progress-text" id="progressText">Preparing...</div>
+    <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+    <div class="prog-text" id="progText">Preparing…</div>
     <div id="log"></div>
   </div>
-</div>
+
+</div><!-- /wrap -->
 
 <script>
-  let contacts = [];
+  /* ════════════════════════════════════════
+     State
+  ════════════════════════════════════════ */
+  let contacts   = [];
+  let isStopped  = false;
+  let startTime  = 0;
 
-  /* ── Tab switching ─────────────────────────────────── */
-  function switchTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach((b, i) => {
-      b.classList.toggle('active', (i === 0 && tab === 'generate') || (i === 1 && tab === 'manual'));
+  const SAFARICOM = ['0700','0701','0710','0711','0712','0720','0721','0722','0723','0724','0725','0726','0727','0728','0729','0740','0741','0742','0743','0745','0746','0757','0758','0759'];
+  const AIRTEL    = ['0110','0111','0112','0113'];
+
+  /* ════════════════════════════════════════
+     Tabs
+  ════════════════════════════════════════ */
+  function switchTab(t) {
+    document.querySelectorAll('.tab-btn').forEach((b, i) =>
+      b.classList.toggle('active', (i === 0 && t === 'generate') || (i === 1 && t === 'manual')));
+    document.getElementById('tab-generate').classList.toggle('active', t === 'generate');
+    document.getElementById('tab-manual').classList.toggle('active',   t === 'manual');
+  }
+
+  /* ════════════════════════════════════════
+     Prefix helpers
+  ════════════════════════════════════════ */
+  function setPfx(vals) {
+    document.querySelectorAll('#prefixGrid input[type=checkbox]').forEach(cb => {
+      const on = vals === true || (Array.isArray(vals) && vals.includes(cb.value));
+      cb.checked = on;
+      cb.closest('.pfx-item').classList.toggle('checked', on);
     });
-    document.getElementById('tab-generate').classList.toggle('active', tab === 'generate');
-    document.getElementById('tab-manual').classList.toggle('active',   tab === 'manual');
   }
+  function selectAllPfx(on)     { setPfx(on ? true : []); }
+  function selectSafaricom()     { setPfx(SAFARICOM); }
+  function selectAirtel()        { setPfx(AIRTEL); }
 
-  /* ── Number validation / formatting ───────────────── */
-  function isValidKenyanNumber(num) {
-    return /^(\+?254|0)[17]\d{8}$/.test(num);
-  }
+  document.getElementById('prefixGrid').addEventListener('change', e => {
+    if (e.target.type === 'checkbox')
+      e.target.closest('.pfx-item').classList.toggle('checked', e.target.checked);
+  });
 
-  function formatNumber(num) {
-    num = num.replace(/[^0-9+]/g, '');
-    if (num.startsWith('+254')) return num;
-    if (num.startsWith('254'))  return '+' + num;
-    if (num.startsWith('0'))    return '+254' + num.slice(1);
-    return num;
-  }
-
-  /* ── Generate random numbers ───────────────────────── */
+  /* ════════════════════════════════════════
+     Generate numbers
+  ════════════════════════════════════════ */
   function generateNumbers() {
-    const prefixes = [...document.querySelectorAll('.prefix-grid input:checked')].map(c => c.value);
-    if (!prefixes.length) return alert('Please select at least one prefix.');
+    const prefixes = [...document.querySelectorAll('#prefixGrid input:checked')].map(c => c.value);
+    if (!prefixes.length) return showError('Select at least one prefix.');
 
-    const count = parseInt(document.getElementById('numCount').value);
-    if (!count || count < 1) return alert('Enter a valid number count.');
+    const count  = parseInt(document.getElementById('numCount').value);
+    if (!count || count < 1) return showError('Enter a valid number count.');
 
-    const dedupe   = document.getElementById('dedupe').value === 'yes';
-    const generated = new Set();
-    const result    = [];
-    let attempts    = 0;
+    const btn    = document.getElementById('genBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Generating…';
 
-    while (result.length < count && attempts < count * 10) {
-      attempts++;
-      const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-      const suffix = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
-      const number = '+254' + prefix.slice(1) + suffix;
-      if (dedupe && generated.has(number)) continue;
-      generated.add(number);
-      result.push(number);
-    }
+    setTimeout(() => {
+      const dedupe = document.getElementById('dedupe').value === 'yes';
+      const seen   = new Set();
+      const result = [];
+      let   tries  = 0;
+      const max    = Math.max(count * 20, count + 1000000);
 
-    contacts = result;
-    updateContactUI([], []);
+      while (result.length < count && tries < max) {
+        tries++;
+        const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+        const suffix = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+        const num    = '+254' + prefix.slice(1) + suffix;
+        if (dedupe && seen.has(num)) continue;
+        seen.add(num);
+        result.push(num);
+      }
+
+      contacts = result;
+      updateContactUI();
+      btn.disabled = false;
+      btn.innerHTML = '⚡ Generate Numbers';
+    }, 60);
   }
 
-  /* ── Load manually entered numbers ────────────────── */
+  /* ════════════════════════════════════════
+     Load manual numbers
+  ════════════════════════════════════════ */
+  function isValidKE(n) { return /^(\+?254|0)[17]\d{8}$/.test(n); }
+  function fmtNum(n) {
+    n = n.replace(/[^0-9+]/g, '');
+    if (n.startsWith('+254')) return n;
+    if (n.startsWith('254'))  return '+' + n;
+    if (n.startsWith('0'))    return '+254' + n.slice(1);
+    return n;
+  }
+
   function loadNumbers() {
-    const raw   = document.getElementById('manualNumbers').value;
-    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const lines   = document.getElementById('manualNumbers').value
+      .split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const valid   = [];
     const invalid = [];
 
-    lines.forEach(line => {
-      const num = line.replace(/[^0-9+]/g, '');
-      if (isValidKenyanNumber(num)) valid.push(formatNumber(num));
-      else if (num.length > 0)      invalid.push(line);
+    lines.forEach(l => {
+      const n = l.replace(/[^0-9+]/g, '');
+      if (isValidKE(n)) valid.push(fmtNum(n));
+      else if (n.length) invalid.push(l);
     });
 
     contacts = [...new Set(valid)];
-    updateContactUI(invalid, valid);
+    updateContactUI(invalid);
 
-    if (!contacts.length) alert('No valid Kenyan numbers found. Check format: 07XXXXXXXXX');
-    else alert(`✅ ${contacts.length} valid number(s) loaded!`);
+    if (!contacts.length) showError('No valid Kenyan numbers found. Use format: 07XXXXXXXXX');
+    else { hideError(); toast(`✅ ${contacts.length} number(s) loaded`); }
   }
 
-  /* ── Shared contact UI update ──────────────────────── */
-  function updateContactUI(invalid = [], valid = []) {
+  /* ════════════════════════════════════════
+     Shared contact UI
+  ════════════════════════════════════════ */
+  function updateContactUI(invalid = []) {
     const badge   = document.getElementById('contactBadge');
     const preview = document.getElementById('numbersPreview');
-
-    badge.style.display = contacts.length ? 'inline-block' : 'none';
-    badge.textContent   = contacts.length;
+    badge.style.display = contacts.length ? 'inline-flex' : 'none';
+    document.getElementById('badgeCount').textContent = contacts.length.toLocaleString();
 
     if (contacts.length) {
-      const isGenerated = valid.length === 0; // generated numbers won't pass isValid check, so use colour differently
       preview.style.display = 'block';
+      const shown = contacts.slice(0, 80);
       preview.innerHTML =
-        contacts.slice(0, 100).map(n =>
-          `<span style="margin-right:10px;color:${isGenerated ? '#38bdf8' : '#22c55e'}">${isGenerated ? '' : '✅ '}${n}</span>`
-        ).join('') +
-        (contacts.length > 100 ? `<br/><span style="color:#64748b">...and ${contacts.length - 100} more</span>` : '') +
-        (invalid && invalid.length ? `<br/><span style="color:#ef4444">❌ Invalid: ${invalid.join(', ')}</span>` : '');
+        shown.map(n => `<span style="color:var(--accent);margin-right:10px">${n}</span>`).join('') +
+        (contacts.length > 80 ? `<span style="color:var(--muted)"> +${(contacts.length - 80).toLocaleString()} more</span>` : '') +
+        (invalid.length ? `<br/><span style="color:var(--red)">❌ Invalid (${invalid.length}): ${invalid.slice(0,5).join(', ')}${invalid.length > 5 ? '…' : ''}</span>` : '');
+    } else {
+      preview.style.display = 'none';
     }
   }
 
-  /* ── Char counter ──────────────────────────────────── */
+  /* ════════════════════════════════════════
+     Char counter
+  ════════════════════════════════════════ */
   function updateCharCount() {
-    const len = document.getElementById('message').value.length;
-    const el  = document.getElementById('charCount');
-    el.textContent = `${len} / 160`;
-    el.className   = 'char-count' + (len > 160 ? ' over' : len > 130 ? ' warn' : '');
+    const txt  = document.getElementById('message').value;
+    const len  = txt.length;
+    const fill = document.getElementById('charFill');
+    const cnt  = document.getElementById('charCount');
+    const pct  = Math.min((len / 160) * 100, 100);
+
+    fill.style.width      = pct + '%';
+    fill.style.background = len > 160 ? 'var(--red)' : len > 130 ? 'var(--yellow)' : 'var(--accent)';
+    cnt.textContent       = `${len} / 160`;
+    cnt.className         = 'char-num' + (len > 160 ? ' over' : len > 130 ? ' warn' : '');
+
+    // Live preview
+    const prev = document.getElementById('msgPreview');
+    prev.innerHTML = txt
+      .replace(/https?:\/\/\S+/g, u => `<a class="msg-link" href="${u}" target="_blank">${u}</a>`)
+      .replace(/\n/g, '<br/>');
   }
 
-  /* ── Log helpers ───────────────────────────────────── */
+  /* ════════════════════════════════════════
+     Error / toast
+  ════════════════════════════════════════ */
+  function showError(msg) {
+    const b = document.getElementById('errorBox');
+    b.style.display = 'block';
+    b.textContent   = '⚠ ' + msg;
+  }
+  function hideError() { document.getElementById('errorBox').style.display = 'none'; }
+
+  function toast(msg) {
+    const t = Object.assign(document.createElement('div'), {
+      textContent: msg,
+      style: `
+        position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+        background:rgba(0,229,160,0.12); border:1px solid rgba(0,229,160,0.3);
+        color:var(--accent); font-family:var(--mono); font-size:0.8rem;
+        padding:10px 22px; border-radius:99px; z-index:999;
+        animation:fadeUp 0.3s ease both;
+      `
+    });
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+  }
+
+  /* ════════════════════════════════════════
+     Log
+  ════════════════════════════════════════ */
   function addLog(msg, type = 'info') {
     const log = document.getElementById('log');
     log.style.display = 'block';
-    const div = document.createElement('div');
-    div.className = `log-${type}`;
-    div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-    log.appendChild(div);
+    const d = document.createElement('div');
+    d.className   = 'log-' + type;
+    d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    log.appendChild(d);
     log.scrollTop = log.scrollHeight;
   }
 
-  function showError(msg) {
-    const box = document.getElementById('errorBox');
-    box.style.display = 'block';
-    box.textContent   = '❌ ' + msg;
+  /* ════════════════════════════════════════
+     Send
+  ════════════════════════════════════════ */
+  function stopSending() {
+    isStopped = true;
+    document.getElementById('stopBtn').disabled = true;
+    addLog('⏹ Stop requested — finishing current request…', 'info');
   }
 
-  function hideError() {
-    document.getElementById('errorBox').style.display = 'none';
-  }
-
-  /* ── Send logic ────────────────────────────────────── */
   async function startSending() {
     hideError();
     const apiKey   = document.getElementById('apiKey').value.trim();
     const deviceId = document.getElementById('deviceId').value.trim();
     const message  = document.getElementById('message').value.trim();
 
-    if (!apiKey)           return showError('API Key is missing.');
-    if (!deviceId)         return showError('Device ID is missing.');
-    if (!message)          return showError('Please enter a message.');
-    if (!contacts.length)  return showError('No contacts loaded. Generate or add numbers first.');
+    if (!apiKey)          return showError('API Key is required.');
+    if (!deviceId)        return showError('Device ID is required.');
+    if (!message)         return showError('Message cannot be empty.');
+    if (!contacts.length) return showError('No contacts loaded. Generate or paste numbers first.');
 
-    document.getElementById('progressSection').style.display = 'block';
-    document.getElementById('sendBtn').disabled = true;
-    document.getElementById('log').innerHTML    = '';
+    isStopped  = false;
+    startTime  = Date.now();
+
+    const section = document.getElementById('progressSection');
+    const sendBtn = document.getElementById('sendBtn');
+    const stopBtn = document.getElementById('stopBtn');
+
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    sendBtn.style.display = 'none';
+    stopBtn.style.display = 'block';
+    stopBtn.disabled      = false;
+    document.getElementById('log').innerHTML     = '';
     document.getElementById('log').style.display = 'none';
 
     const total = contacts.length;
     let sent = 0, failed = 0;
-    document.getElementById('statTotal').textContent   = total;
-    document.getElementById('progressText').textContent = 'Sending...';
-    addLog(`Starting bulk send to ${total} number(s)...`, 'info');
+
+    document.getElementById('statTotal').textContent = total.toLocaleString();
+    document.getElementById('statSent').textContent  = '0';
+    document.getElementById('statFailed').textContent= '0';
+    document.getElementById('progFill').style.width  = '0%';
+    document.getElementById('progText').textContent  = 'Connecting…';
 
     const endpoint = `https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/send-sms`;
     const headers  = { 'Content-Type': 'application/json', 'x-api-key': apiKey };
 
-    // Attempt bulk send first
-    try {
-      const res  = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ recipients: contacts, message })
-      });
-      const text = await res.text();
-      let data   = {};
-      try { data = JSON.parse(text); } catch(e) {}
+    // ── Split into batches of 50 (TextBee's per-request limit) ──────
+    // This bypasses the 50-message cap entirely — unlimited total recipients,
+    // sent as consecutive batches of 50 per API call.
+    const BATCH_SIZE = 50;
+    const batches = [];
+    for (let i = 0; i < contacts.length; i += BATCH_SIZE)
+      batches.push(contacts.slice(i, i + BATCH_SIZE));
 
-      if (res.ok) {
-        sent = total;
-        document.getElementById('statSent').textContent     = sent;
-        document.getElementById('progressBar').style.width  = '100%';
-        document.getElementById('progressText').textContent = `Completed — ${sent} sent`;
-        addLog(`✅ All ${total} messages queued successfully!`, 'ok');
-        document.getElementById('sendBtn').disabled = false;
-        return;
+    const totalBatches = batches.length;
+    addLog(`▶ Campaign started — ${total.toLocaleString()} recipients in ${totalBatches} batch${totalBatches !== 1 ? 'es' : ''} of ${BATCH_SIZE}`, 'head');
+
+    for (let b = 0; b < batches.length; b++) {
+      if (isStopped) {
+        addLog(`⏹ Stopped after batch ${b} of ${totalBatches}`, 'info');
+        break;
       }
 
-      // Bulk failed – fall through to one-by-one
-      addLog(`Bulk send declined (${data.message || res.status}). Switching to one-by-one mode...`, 'info');
-    } catch (err) {
-      addLog(`Bulk attempt network error: ${err.message}. Switching to one-by-one mode...`, 'info');
-    }
+      const batch = batches[b];
 
-    // One-by-one fallback
-    for (let i = 0; i < contacts.length; i++) {
       try {
-        const res  = await fetch(endpoint, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ recipients: [contacts[i]], message })
+        const r   = await fetch(endpoint, {
+          method: 'POST', headers,
+          body: JSON.stringify({ recipients: batch, message })
         });
-        const text = await res.text();
-        let data   = {};
-        try { data = JSON.parse(text); } catch(e) {}
+        const txt = await r.text();
+        let data  = {};
+        try { data = JSON.parse(txt); } catch(e) {}
 
-        if (res.ok) {
-          sent++;
-          addLog(`✅ Sent to ${contacts[i]}`, 'ok');
+        if (r.ok) {
+          sent += batch.length;
+          addLog(`✅ Batch ${b + 1}/${totalBatches} — ${batch.length} sent (${batch[0]}${batch.length > 1 ? ' … ' + batch[batch.length - 1] : ''})`, 'ok');
         } else {
-          failed++;
-          addLog(`❌ Failed ${contacts[i]}: ${data.message || res.status}`, 'err');
+          // Batch rejected — fall back to sending one-by-one within this batch
+          addLog(`⚠ Batch ${b + 1} rejected (${data.message || r.status}) — retrying individually…`, 'info');
+          for (const num of batch) {
+            if (isStopped) break;
+            try {
+              const r2 = await fetch(endpoint, {
+                method: 'POST', headers,
+                body: JSON.stringify({ recipients: [num], message })
+              });
+              if (r2.ok) { sent++;   addLog(`✅ ${num}`, 'ok'); }
+              else        { failed++; addLog(`❌ ${num} — ${r2.status}`, 'err'); }
+            } catch (e2) {
+              failed++;
+              addLog(`❌ ${num} — ${e2.message}`, 'err');
+            }
+            await new Promise(r => setTimeout(r, 300));
+          }
         }
-      } catch (err) {
-        failed++;
-        addLog(`❌ Network error for ${contacts[i]}: ${err.message}`, 'err');
+      } catch (e) {
+        failed += batch.length;
+        addLog(`❌ Batch ${b + 1} network error — ${e.message}`, 'err');
       }
 
-      document.getElementById('statSent').textContent      = sent;
-      document.getElementById('statFailed').textContent    = failed;
-      document.getElementById('progressBar').style.width   = `${((i + 1) / total) * 100}%`;
-      document.getElementById('progressText').textContent  = `${i + 1} of ${total} processed`;
+      // Update stats after every batch
+      document.getElementById('statSent').textContent   = sent.toLocaleString();
+      document.getElementById('statFailed').textContent = failed.toLocaleString();
+      const processed = Math.min((b + 1) * BATCH_SIZE, total);
+      document.getElementById('progFill').style.width  = ((processed / total) * 100).toFixed(1) + '%';
+      document.getElementById('progText').textContent  =
+        `Batch ${b + 1} of ${totalBatches} — ${processed.toLocaleString()} / ${total.toLocaleString()} processed`;
 
-      await new Promise(r => setTimeout(r, 400));
+      // Live send rate
+      const elapsed = (Date.now() - startTime) / 1000 / 60;
+      if (elapsed > 0)
+        document.getElementById('rateLabel').textContent = Math.round(sent / elapsed) + ' / min';
+
+      // Brief pause between batches
+      if (b < batches.length - 1 && !isStopped)
+        await new Promise(r => setTimeout(r, 400));
     }
 
-    addLog(`🎉 Done! Sent: ${sent} | Failed: ${failed}`, sent > 0 ? 'ok' : 'err');
-    document.getElementById('progressText').textContent = `Completed — ${sent} sent, ${failed} failed`;
-    document.getElementById('sendBtn').disabled = false;
+    addLog(`🎉 Done — Sent: ${sent.toLocaleString()}  Failed: ${failed.toLocaleString()}  (${(sent + failed).toLocaleString()} processed)`, sent > 0 ? 'ok' : 'err');
+    document.getElementById('progText').textContent = `Completed — ${sent.toLocaleString()} sent, ${failed.toLocaleString()} failed`;
+
+    sendBtn.style.display = 'block';
+    stopBtn.style.display = 'none';
+    if (!isStopped) toast(`🎉 Done! ${sent.toLocaleString()} sent`);
   }
 
-  // Init
+  /* ── Boot ── */
   updateCharCount();
 </script>
 </body>
